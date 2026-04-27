@@ -196,3 +196,7 @@ Keep going until the user says they're done. Each issue is independent — don't
 | `kselftest` | Integration tests | `make kselftest` |
 | `dynamic debug` | Runtime debug prints | `echo 'module <name> +p' > /sys/kernel/debug/dynamic_debug/control` |
 | `crash` | Post-mortem dump analysis | `crash vmlinux vmcore` |
+| `KASAN` | Use-after-free, buffer overflow | `CONFIG_KASAN=y` — see `SANITIZERS.md` |
+| `KCSAN` | Data race detection | `CONFIG_KCSAN=y` — see `SANITIZERS.md` |
+| `KMSAN` | Uninitialized memory | `CONFIG_KMSAN=y` (Clang only) — see `SANITIZERS.md` |
+| `kmemleak` | Memory leak detection | `CONFIG_DEBUG_KMEMLEAK=y` — see `SANITIZERS.md` |

@@ -86,7 +86,26 @@ Also reads from `~/.agents/skills/` (global) and `/etc/codex/skills/` (system).
 ```bash
 mkdir -p .cursor/rules
 # Copy and rename SKILL.md to .mdc for each skill
-for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop; do
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop kernel-debugging linux-memory linux-networking linux-fileio linux-hardware; do
+  cp "ai-skills/$skill/SKILL.md" ".cursor/rules/$skill.mdc"
+done
+
+Cursor uses `.mdc` files in `.cursor/rules/` instead of a `skills/` directory. The SKILL.md frontmatter (`name`, `description`) maps directly to Cursor's rule format. Also supports `.cursorrules` at project root (legacy).
+
+### Install all skills at once
+
+```bash
+# Pick your agent's directory:
+SKILL_DIR=.claude/skills    # or .kilo/skills, .opencode/skills, .gemini/skills, etc.
+
+mkdir -p "$SKILL_DIR"
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop kernel-debugging linux-memory linux-networking linux-fileio linux-hardware; do
+  cp -r "ai-skills/$skill" "$SKILL_DIR/"
+done
+
+# For Cursor (uses .mdc files in .cursor/rules/):
+mkdir -p .cursor/rules
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop kernel-debugging linux-memory linux-networking linux-fileio linux-hardware; do
   cp "ai-skills/$skill/SKILL.md" ".cursor/rules/$skill.mdc"
 done
 ```
@@ -100,13 +119,13 @@ Cursor uses `.mdc` files in `.cursor/rules/` instead of a `skills/` directory. T
 SKILL_DIR=.claude/skills    # or .kilo/skills, .opencode/skills, .gemini/skills, etc.
 
 mkdir -p "$SKILL_DIR"
-for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop; do
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop kernel-debugging linux-memory linux-networking linux-fileio linux-hardware; do
   cp -r "ai-skills/$skill" "$SKILL_DIR/"
 done
 
 # For Cursor (uses .mdc files in .cursor/rules/):
 mkdir -p .cursor/rules
-for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop; do
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop kernel-debugging linux-memory linux-networking linux-fileio linux-hardware; do
   cp "ai-skills/$skill/SKILL.md" ".cursor/rules/$skill.mdc"
 done
 ```
@@ -312,6 +331,36 @@ Skills for Linux kernel, driver, and userspace systems programming in C, Rust, a
 
   ```
   npx skills@latest add abhinav20sep/ai-skills/linux-event-loop
+  ```
+
+- **kernel-debugging** — Systematic Linux kernel debugging workflows using ftrace, perf, crash/kdump, KGDB, dynamic debug, and KASAN/KCSAN/KMSAN. Covers symptom-to-tool-to-interpretation patterns for kernel panics, hangs, performance issues, and memory corruption.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/kernel-debugging
+  ```
+
+- **linux-memory** — Linux memory management for kernel and userspace in C. Covers kernel allocators (kmalloc, vmalloc, slab caches, mempools, GFP flags), managed allocations (devm_*), DMA mapping API, userspace mmap, memory barriers, and OOM handling.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-memory
+  ```
+
+- **linux-networking** — Linux network programming in C (sockets, raw sockets, netlink), Rust (std::net, tokio), and Zig. Covers TCP/UDP client/server, raw sockets, netlink sockets, TCP tuning, and TLS integration.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-networking
+  ```
+
+- **linux-fileio** — Linux file I/O patterns in C (direct I/O, async I/O, file locking, sendfile, mmap file I/O), Rust, and Zig. Covers O_DIRECT, io_uring for files, flock, fcntl locks, zero-copy transfer, and memory-mapped file access.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-fileio
+  ```
+
+- **linux-hardware** — Hardware access patterns for Linux device drivers in C. Covers MMIO register access, port I/O, device tree parsing, ACPI, regmap API, and interrupt handling (threaded IRQs, IRQ domains).
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-hardware
   ```
 
 ## Tooling & Setup

@@ -545,7 +545,12 @@ setup-kernel-hooks        →  enforce quality from commit 1
 linux-threading           →  add concurrency
 linux-process             →  add IPC / subprocess management
 linux-event-loop          →  add non-blocking I/O
+linux-memory              →  memory management, DMA, barriers
+linux-networking          →  socket programming, TCP/UDP
+linux-fileio              →  direct I/O, file locking, sendfile
+linux-hardware            →  MMIO, device tree, regmap, IRQs
 migrate-unsafe-casts      →  audit and fix type safety
+kernel-debugging          →  ftrace, perf, crash analysis
 kernel-qa                 →  QA session before release
 ```
 
@@ -553,8 +558,14 @@ Not every project uses every skill. Pick what's relevant:
 
 | Project type | Skills to use |
 |---|---|
-| Kernel driver | `scaffold-kernel-module`, `setup-kernel-hooks`, `migrate-unsafe-casts`, `kernel-qa` |
+| Kernel driver (PCIe) | `scaffold-kernel-module`, `linux-memory`, `linux-hardware`, `setup-kernel-hooks`, `migrate-unsafe-casts`, `kernel-debugging`, `kernel-qa` |
+| Kernel driver (platform/DT) | `scaffold-kernel-module`, `linux-hardware`, `linux-memory`, `setup-kernel-hooks`, `kernel-debugging`, `kernel-qa` |
 | Multithreaded C daemon | `linux-threading`, `linux-process`, `linux-event-loop`, `setup-kernel-hooks` |
+| Network server | `linux-event-loop`, `linux-networking`, `linux-threading`, `setup-kernel-hooks`, `kernel-qa` |
+| High-performance file processor | `linux-fileio`, `linux-threading`, `linux-memory`, `setup-kernel-hooks` |
+| Database / storage engine | `linux-fileio`, `linux-memory`, `linux-threading`, `migrate-unsafe-casts` |
 | Rust CLI tool | `scaffold-kernel-module` (Rust userspace), `setup-kernel-hooks`, `migrate-unsafe-casts` |
-| Network server | `linux-event-loop`, `linux-threading`, `setup-kernel-hooks`, `kernel-qa` |
+| SoC/Embedded driver | `scaffold-kernel-module`, `linux-hardware`, `linux-memory`, `kernel-debugging`, `kernel-qa` |
+| HSM / crypto driver | `scaffold-kernel-module`, `linux-memory`, `linux-hardware`, `kernel-debugging`, `kernel-qa`, `migrate-unsafe-casts` |
+| Full-stack HSM | All 12 skills |
 | Full-stack HSM driver | All 7 skills |
