@@ -1,0 +1,560 @@
+# Workflow Examples
+
+End-to-end examples showing how the skills chain together for real projects.
+
+---
+
+## Example 1: C Project with Multithreaded Optimization
+
+**Scenario**: You have a single-threaded C program that processes large files (e.g., a log analyzer, image processor, or data pipeline). You want to add multithreaded processing, set up quality hooks, audit unsafe casts, and verify correctness.
+
+### Step 1: Set up git hooks
+
+Before writing any code, enforce coding style from the start.
+
+```
+You: "Set up pre-commit hooks for my C project"
+```
+
+The agent uses `setup-kernel-hooks` to:
+
+```bash
+# Detects: *.c, *.h files, Makefile → C project
+# Creates githooks/pre-commit with clang-format checks
+# Creates githooks/commit-msg for kernel-style messages
+# Creates githooks/pre-push for test execution
+
+chmod +x githooks/*
+git config core.hooksPath githooks/
+```
+
+Now every commit is checked for formatting and style.
+
+### Step 2: Scaffold the threaded architecture
+
+```
+You: "I need to add multithreaded processing to my file analyzer.
+      Currently it processes files sequentially. I want a thread pool
+      that processes files in parallel with a shared result aggregator."
+```
+
+The agent uses `linux-threading` to design the architecture:
+
+```
+Main thread:  reads file list → dispatches to thread pool
+Thread pool:  N worker threads, each processes one file at a time
+Aggregator:   mutex-protected result struct, workers write results
+```
+
+The agent generates:
+
+```c
+/* thread_pool.h */
+#include <pthread.h>
+
+#define MAX_THREADS 8
+#define MAX_QUEUE   256
+
+typedef void (*task_fn)(void *arg);
+
+struct thread_pool {
+    pthread_t       threads[MAX_THREADS];
+    task_fn         queue[MAX_QUEUE];
+    void           *queue_arg[MAX_QUEUE];
+    int             head, tail, count;
+    int             shutdown;
+    pthread_mutex_t lock;
+    pthread_cond_t  not_empty;
+    pthread_cond_t  not_full;
+};
+
+struct result {
+    pthread_mutex_t lock;
+    int             files_processed;
+    int             total_lines;
+    int             errors;
+};
+
+void thread_pool_init(struct thread_pool *pool, int num_threads);
+void thread_pool_submit(struct thread_pool *pool, task_fn fn, void *arg);
+void thread_pool_shutdown(struct thread_pool *pool);
+```
+
+```c
+/* analyzer.c */
+#include "thread_pool.h"
+
+static struct result results;
+
+static void process_file(void *arg)
+{
+    const char *path = arg;
+    int lines = count_lines(path);  /* your processing logic */
+
+    pthread_mutex_lock(&results.lock);
+    results.files_processed++;
+    results.total_lines += lines;
+    pthread_mutex_unlock(&results.lock);
+}
+
+int main(int argc, char **argv)
+{
+    struct thread_pool pool;
+    pthread_mutex_init(&results.lock, NULL);
+    thread_pool_init(&pool, 4);
+
+    for (int i = 1; i < argc; i++)
+        thread_pool_submit(&pool, process_file, argv[i]);
+
+    thread_pool_shutdown(&pool);
+
+    printf("Processed %d files, %d lines, %d errors\n",
+           results.files_processed, results.total_lines, results.errors);
+
+    pthread_mutex_destroy(&results.lock);
+    return 0;
+}
+```
+
+### Step 3: Migrate unsafe casts
+
+Before committing, audit the code for unsafe patterns.
+
+```
+You: "Check my C code for unsafe casts and fix them"
+```
+
+The agent uses `migrate-unsafe-casts` to:
+
+1. Scan for `(type *)ptr` patterns
+2. Find `void *` parameters that should be typed
+3. Generate Coccinelle patches for batch migration
+
+Example findings:
+
+```c
+/* BEFORE — agent found these */
+struct file_data *data = (struct file_data *)arg;  /* raw cast in worker */
+int count = (int)long_value;                        /* narrowing cast */
+
+/* AFTER — agent fixed */
+struct file_data *data = container_of(arg, struct file_data, work);
+/* or: passed typed pointer directly via task_arg struct */
+
+if (long_value > INT_MAX) {
+    fprintf(stderr, "overflow\n");
+    return -EINVAL;
+}
+int count = (int)long_value;
+```
+
+Agent runs `sparse` to verify:
+```bash
+make C=1 2>&1 | grep -E 'warning|error'
+```
+
+### Step 4: Write tests
+
+```
+You: "Write tests for the thread pool"
+```
+
+The agent generates a test file:
+
+```c
+/* test_thread_pool.c */
+#include "thread_pool.h"
+#include <assert.h>
+#include <stdio.h>
+
+static int counter = 0;
+static pthread_mutex_t counter_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void increment(void *arg)
+{
+    (void)arg;
+    pthread_mutex_lock(&counter_lock);
+    counter++;
+    pthread_mutex_unlock(&counter_lock);
+}
+
+static void test_basic_submit(void)
+{
+    struct thread_pool pool;
+    counter = 0;
+    thread_pool_init(&pool, 4);
+
+    for (int i = 0; i < 100; i++)
+        thread_pool_submit(&pool, increment, NULL);
+
+    thread_pool_shutdown(&pool);
+    assert(counter == 100);
+    printf("PASS: test_basic_submit\n");
+}
+
+static void test_empty_shutdown(void)
+{
+    struct thread_pool pool;
+    thread_pool_init(&pool, 2);
+    thread_pool_shutdown(&pool);
+    printf("PASS: test_empty_shutdown\n");
+}
+
+int main(void)
+{
+    test_basic_submit();
+    test_empty_shutdown();
+    printf("All tests passed\n");
+    return 0;
+}
+```
+
+### Step 5: QA session
+
+```
+You: "Run a QA session on my analyzer — I'm seeing occasional deadlocks"
+```
+
+The agent uses `kernel-qa` to:
+
+1. **Listen**: "Occasional deadlocks under heavy load"
+2. **Explore**: Traces lock ordering in the codebase
+   - `results.lock` is acquired in `process_file()`
+   - `pool.lock` is acquired in `thread_pool_submit()`
+   - Check: are these ever nested?
+3. **Find**: In `thread_pool_submit()`, the pool lock is held while the queue is full and `pthread_cond_wait` blocks. If a worker tries to submit another task while holding `results.lock`, deadlock.
+4. **Fix**: Ensure no thread holds one lock while waiting for another. Restructure so workers never submit new tasks.
+5. **Verify**: Run with ThreadSanitizer:
+   ```bash
+   gcc -pthread -fsanitize=thread -o analyzer test_thread_pool.c thread_pool.c
+   ./analyzer test_files/*
+   ```
+
+### Step 6: Commit and verify
+
+```bash
+git add -A
+# pre-commit hook runs: clang-format check, style check
+git commit -m "analyzer: add thread pool for parallel file processing
+
+Replace sequential file processing with a bounded thread pool.
+Workers process files independently and write results under
+mutex protection. Thread count defaults to 4, configurable.
+
+Tested with ThreadSanitizer — no data races detected."
+
+# pre-commit hook ran successfully ✓
+```
+
+### Skills used in this workflow
+
+| Step | Skill | What it did |
+|---|---|---|
+| 1 | `setup-kernel-hooks` | Set up clang-format + commit-msg hooks |
+| 2 | `linux-threading` | Designed thread pool architecture |
+| 3 | `migrate-unsafe-casts` | Found and fixed unsafe casts |
+| 4 | `linux-threading` | Generated thread-safe test suite |
+| 5 | `kernel-qa` | Diagnosed deadlock, suggested TSAN |
+| 6 | `setup-kernel-hooks` | Pre-commit hook verified formatting |
+
+---
+
+## Example 2: Forth Compiler in Rust
+
+**Scenario**: You're building a Forth interpreter/compiler as a learning project in Rust. You want to scaffold the project, set up quality hooks, handle process management for running compiled programs, and use event-driven I/O for the REPL.
+
+### Step 1: Scaffold the Rust project
+
+```
+You: "Scaffold a Rust project for a Forth compiler"
+```
+
+The agent uses `scaffold-kernel-module` (Rust userspace mode):
+
+```bash
+cargo init --name forth-compiler
+```
+
+Creates:
+```
+forth-compiler/
+├── Cargo.toml
+├── src/
+│   ├── main.rs        # REPL entry point
+│   ├── lib.rs         # Core compiler/interpreter
+│   ├── lexer.rs       # Tokenizer
+│   ├── parser.rs      # AST builder
+│   ├── compiler.rs    # Forth → stack machine bytecode
+│   ├── vm.rs          # Stack machine interpreter
+│   └── words.rs       # Built-in Forth words (+, -, *, /, DUP, DROP, SWAP, etc.)
+└── tests/
+    └── integration.rs
+```
+
+### Step 2: Set up git hooks
+
+```
+You: "Set up pre-commit hooks for my Rust project"
+```
+
+The agent uses `setup-kernel-hooks`:
+
+```bash
+# Detects: *.rs, Cargo.toml → Rust project
+# Creates githooks/pre-commit with rustfmt + clippy
+# Creates githooks/pre-push with cargo test
+```
+
+`githooks/pre-commit`:
+```bash
+#!/bin/bash
+set -e
+RS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.rs$' || true)
+if [ -n "$RS_FILES" ]; then
+    for f in $RS_FILES; do
+        rustfmt --check "$f" || { echo "FAIL: rustfmt $f"; exit 1; }
+    done
+    cargo clippy -- -D warnings || { echo "FAIL: clippy"; exit 1; }
+fi
+```
+
+### Step 3: Build the core interpreter with threading
+
+```
+You: "I want the REPL to support async I/O so it doesn't block
+      on long-running Forth programs. Also add a compilation
+      mode that can compile Forth to native x86-64."
+```
+
+The agent uses `linux-threading` and `linux-event-loop` to design:
+
+```
+REPL (main thread):      reads input → sends to compiler via channel
+Compiler (worker thread): parses → compiles → sends bytecode back
+VM (main thread):        executes bytecode, yields to REPL on HALT
+```
+
+```rust
+use std::sync::mpsc;
+use std::thread;
+
+enum CompilerRequest {
+    Compile(String),
+    Shutdown,
+}
+
+enum CompilerResponse {
+    Bytecode(Vec<Op>),
+    Error(String),
+}
+
+fn start_compiler() -> (mpsc::Sender<CompilerRequest>, mpsc::Receiver<CompilerResponse>) {
+    let (req_tx, req_rx) = mpsc::channel();
+    let (resp_tx, resp_rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        for req in req_rx {
+            match req {
+                CompilerRequest::Compile(source) => {
+                    match compile(&source) {
+                        Ok(bytecode) => { resp_tx.send(CompilerResponse::Bytecode(bytecode)).unwrap(); }
+                        Err(e) => { resp_tx.send(CompilerResponse::Error(e.to_string())).unwrap(); }
+                    }
+                }
+                CompilerRequest::Shutdown => break,
+            }
+        }
+    });
+
+    (req_tx, resp_rx)
+}
+```
+
+### Step 4: Interactive REPL with event-driven input
+
+The agent uses `linux-event-loop` patterns for a non-blocking REPL:
+
+```rust
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::sync::mpsc;
+
+#[tokio::main]
+async fn main() {
+    let (tx, mut rx) = mpsc::channel(32);
+    let stdin = BufReader::new(tokio::io::stdin());
+    let mut lines = stdin.lines();
+
+    // Compiler runs in background
+    let compiler_tx = start_compiler_async();
+
+    println!("Forth REPL v0.1 — type 'quit' to exit");
+
+    loop {
+        print!("> ");
+        match lines.next_line().await {
+            Ok(Some(line)) => {
+                if line.trim() == "quit" { break; }
+                compiler_tx.send(CompilerRequest::Compile(line)).await.unwrap();
+                match rx.recv().await {
+                    Some(CompilerResponse::Bytecode(ops)) => {
+                        let result = vm.execute(&ops);
+                        println!("{}", result);
+                    }
+                    Some(CompilerResponse::Error(e)) => eprintln!("Error: {}", e),
+                    None => eprintln!("Compiler crashed"),
+                }
+            }
+            Ok(None) => break,
+            Err(e) => { eprintln!("stdin error: {}", e); break; }
+        }
+    }
+}
+```
+
+### Step 5: Process management for running compiled programs
+
+```
+You: "Add a mode where the compiler can emit a standalone ELF binary
+      and execute it as a subprocess"
+```
+
+The agent uses `linux-process` to implement:
+
+```rust
+use std::process::Command;
+
+fn compile_and_run(source: &str) -> Result<String, Box<dyn std::error::Error>> {
+    // 1. Compile Forth → x86-64 assembly
+    let asm = compile_to_asm(source)?;
+
+    // 2. Write to temp file
+    let asm_path = "/tmp/forth_output.s";
+    std::fs::write(asm_path, &asm)?;
+
+    // 3. Assemble and link
+    Command::new("as")
+        .args(["-o", "/tmp/forth_output.o", asm_path])
+        .status()?;
+
+    Command::new("ld")
+        .args(["-o", "/tmp/forth_bin", "/tmp/forth_output.o"])
+        .status()?;
+
+    // 4. Execute as subprocess
+    let output = Command::new("/tmp/forth_bin")
+        .output()?;
+
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+```
+
+### Step 6: Migrate unsafe casts during refactoring
+
+After initial development, audit for clippy warnings:
+
+```
+You: "Run the unsafe cast migration on my Forth compiler"
+```
+
+The agent uses `migrate-unsafe-casts`:
+
+```bash
+cargo clippy -- -W clippy::as_conversions -W clippy::cast_possible_truncation
+```
+
+Finds:
+```rust
+// BEFORE
+let byte = value as u8;  // truncation risk
+let ptr = addr as *const u8;  // raw pointer cast
+
+// AFTER
+let byte = u8::try_from(value).map_err(|_| "overflow")?;
+let ptr = std::ptr::from_exposed_addr(addr);  // or use safe abstractions
+```
+
+### Step 7: QA session before release
+
+```
+You: "Do a QA session on the Forth compiler before I release it"
+```
+
+The agent uses `kernel-qa` (adapted for userspace):
+
+1. **Explore**: Traces the code path: `REPL → lexer → parser → compiler → VM`
+2. **Check for common bugs**:
+   - Stack underflow in VM (no bounds check on `pop()`)
+   - Integer overflow in arithmetic words
+   - Unbounded recursion in Forth `:` definitions
+   - Memory leak if compiled programs don't free temp files
+3. **Suggest tests**:
+   ```rust
+   #[test]
+   fn test_stack_underflow() {
+       let mut vm = Vm::new();
+       let result = vm.execute_str("DROP");  // empty stack
+       assert!(result.is_err());
+   }
+
+   #[test]
+   fn test_arithmetic_overflow() {
+       let mut vm = Vm::new();
+       let result = vm.execute_str("2147483647 1 +");  // i32::MAX + 1
+       assert!(result.is_err());
+   }
+   ```
+4. **File issue**: "VM stack operations lack bounds checking — panics on underflow"
+
+### Step 8: Final commit
+
+```bash
+git add -A
+# pre-commit: rustfmt ✓, clippy ✓
+# pre-push: cargo test ✓
+git commit -m "forth: initial compiler with REPL, bytecode VM, and native compilation
+
+- Lexer, parser, compiler, and stack machine VM
+- Async REPL with tokio
+- Native x86-64 compilation mode via subprocess
+- Threaded compilation pipeline
+- 47 unit tests, 12 integration tests"
+```
+
+### Skills used in this workflow
+
+| Step | Skill | What it did |
+|---|---|---|
+| 1 | `scaffold-kernel-module` | Scaffolded Rust project structure |
+| 2 | `setup-kernel-hooks` | Set up rustfmt + clippy + test hooks |
+| 3 | `linux-threading` | Designed threaded compiler pipeline |
+| 4 | `linux-event-loop` | Async REPL with tokio |
+| 5 | `linux-process` | Subprocess execution for compiled binaries |
+| 6 | `migrate-unsafe-casts` | Fixed clippy::as_conversions warnings |
+| 7 | `kernel-qa` | QA session, found stack underflow bug |
+| 8 | `setup-kernel-hooks` | Pre-commit verified all checks pass |
+
+---
+
+## How skills compose
+
+The skills are designed to be used independently or chained together. A typical workflow:
+
+```
+scaffold-kernel-module    →  create the project skeleton
+setup-kernel-hooks        →  enforce quality from commit 1
+linux-threading           →  add concurrency
+linux-process             →  add IPC / subprocess management
+linux-event-loop          →  add non-blocking I/O
+migrate-unsafe-casts      →  audit and fix type safety
+kernel-qa                 →  QA session before release
+```
+
+Not every project uses every skill. Pick what's relevant:
+
+| Project type | Skills to use |
+|---|---|
+| Kernel driver | `scaffold-kernel-module`, `setup-kernel-hooks`, `migrate-unsafe-casts`, `kernel-qa` |
+| Multithreaded C daemon | `linux-threading`, `linux-process`, `linux-event-loop`, `setup-kernel-hooks` |
+| Rust CLI tool | `scaffold-kernel-module` (Rust userspace), `setup-kernel-hooks`, `migrate-unsafe-casts` |
+| Network server | `linux-event-loop`, `linux-threading`, `setup-kernel-hooks`, `kernel-qa` |
+| Full-stack HSM driver | All 7 skills |

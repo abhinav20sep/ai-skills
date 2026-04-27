@@ -10,6 +10,8 @@ If you want to keep up with changes to these skills, and any new ones I create, 
 
 All skills use the [Agent Skills](https://agentskills.io) open standard — `SKILL.md` files with YAML frontmatter. The file format is identical across agents; only the directory differs.
 
+> **See [WORKFLOW.example](WORKFLOW.example)** for end-to-end examples showing how skills chain together for real projects (C multithreaded optimization, Forth compiler in Rust).
+
 ### Clone the repo
 
 ```bash
