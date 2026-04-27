@@ -74,9 +74,9 @@ These skills help you write, refactor, and fix code.
   npx skills@latest add mattpocock/skills/scaffold-exercises
   ```
 
-## Kernel & Systems Development
+## Linux & Systems Development
 
-Skills for Linux kernel module and driver development in C, Rust, and Zig.
+Skills for Linux kernel, driver, and userspace systems programming in C, Rust, and Zig.
 
 - **scaffold-kernel-module** — Scaffold Linux kernel modules and drivers with correct boilerplate. Supports PCIe drivers, character devices, misc devices, platform drivers, Rust kernel modules, and Zig projects.
 
@@ -100,6 +100,24 @@ Skills for Linux kernel module and driver development in C, Rust, and Zig.
 
   ```
   npx skills@latest add abhinav20sep/ai-skills/kernel-qa
+  ```
+
+- **linux-threading** — Multithreading patterns for Linux in C (pthreads), Rust (std::thread, Arc, Mutex, channels, Rayon), and Zig (std.Thread). Covers thread creation, synchronization, thread pools, lock-free patterns, and concurrency bug detection.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-threading
+  ```
+
+- **linux-process** — Process management and IPC patterns for Linux in C (fork/exec, pipes, shared memory, semaphores, message queues, Unix sockets, signals), Rust (std::process, nix crate), and Zig. Covers daemon processes, signal handling, and all POSIX IPC mechanisms.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-process
+  ```
+
+- **linux-event-loop** — Event-driven I/O patterns for Linux in C (epoll, select, poll, io_uring), Rust (mio, tokio), and Zig. Covers non-blocking I/O, event loops, io_uring, and high-performance network server design.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/linux-event-loop
   ```
 
 ## Tooling & Setup
