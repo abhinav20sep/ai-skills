@@ -6,6 +6,146 @@ If you want to keep up with changes to these skills, and any new ones I create, 
 
 [Sign Up To The Newsletter](https://www.aihero.dev/s/skills-newsletter)
 
+## Installation
+
+All skills use the [Agent Skills](https://agentskills.io) open standard — `SKILL.md` files with YAML frontmatter. The file format is identical across agents; only the directory differs.
+
+### Clone the repo
+
+```bash
+git clone https://github.com/abhinav20sep/ai-skills.git
+```
+
+### Install per agent
+
+**Kilo Code CLI** — copies into `.kilo/skills/`:
+
+```bash
+mkdir -p .kilo/skills
+cp -r ai-skills/<skill-name> .kilo/skills/
+```
+
+Also reads from `.opencode/skills/` and `~/.config/kilo/skills/` (global).
+
+**OpenCode** — copies into `.opencode/skills/`:
+
+```bash
+mkdir -p .opencode/skills
+cp -r ai-skills/<skill-name> .opencode/skills/
+```
+
+Also reads from `.claude/skills/` and `~/.config/opencode/skills/` (global).
+
+**Claude Code** — copies into `.claude/skills/`:
+
+```bash
+mkdir -p .claude/skills
+cp -r ai-skills/<skill-name> .claude/skills/
+```
+
+Also reads from `~/.claude/skills/` (global).
+
+**Gemini CLI** — copies into `.gemini/skills/`, or use the install command:
+
+```bash
+# Option A: copy manually
+mkdir -p .gemini/skills
+cp -r ai-skills/<skill-name> .gemini/skills/
+
+# Option B: install from repo
+gemini skills install https://github.com/abhinav20sep/ai-skills.git
+
+# Option C: link the whole repo
+gemini skills link /path/to/ai-skills
+```
+
+Manage with `/skills list`, `/skills enable <name>`, `/skills disable <name>`.
+
+**Kiro CLI** — copies into `.kiro/skills/`:
+
+```bash
+mkdir -p .kiro/skills
+cp -r ai-skills/<skill-name> .kiro/skills/
+```
+
+Also reads from `~/.kiro/skills/` (global).
+
+**Codex CLI** — copies into `.agents/skills/`:
+
+```bash
+mkdir -p .agents/skills
+cp -r ai-skills/<skill-name> .agents/skills/
+```
+
+Also reads from `~/.agents/skills/` (global) and `/etc/codex/skills/` (system).
+
+**Cursor** — copies into `.cursor/rules/` as `.mdc` files:
+
+```bash
+mkdir -p .cursor/rules
+# Copy and rename SKILL.md to .mdc for each skill
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop; do
+  cp "ai-skills/$skill/SKILL.md" ".cursor/rules/$skill.mdc"
+done
+```
+
+Cursor uses `.mdc` files in `.cursor/rules/` instead of a `skills/` directory. The SKILL.md frontmatter (`name`, `description`) maps directly to Cursor's rule format. Also supports `.cursorrules` at project root (legacy).
+
+### Install all skills at once
+
+```bash
+# Pick your agent's directory:
+SKILL_DIR=.claude/skills    # or .kilo/skills, .opencode/skills, .gemini/skills, etc.
+
+mkdir -p "$SKILL_DIR"
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop; do
+  cp -r "ai-skills/$skill" "$SKILL_DIR/"
+done
+
+# For Cursor (uses .mdc files in .cursor/rules/):
+mkdir -p .cursor/rules
+for skill in scaffold-kernel-module setup-kernel-hooks migrate-unsafe-casts kernel-qa linux-threading linux-process linux-event-loop; do
+  cp "ai-skills/$skill/SKILL.md" ".cursor/rules/$skill.mdc"
+done
+```
+
+### Install a single skill
+
+```bash
+# Example: install linux-threading for Claude Code
+cp -r ai-skills/linux-threading .claude/skills/
+```
+
+### Global install (all projects)
+
+```bash
+# Kilo:    ~/.config/kilo/skills/
+# OpenCode: ~/.config/opencode/skills/
+# Claude:  ~/.claude/skills/
+# Cursor:  ~/.cursor/rules/  (use .mdc extension)
+# Gemini:  ~/.gemini/skills/
+# Kiro:    ~/.kiro/skills/
+# Codex:   ~/.agents/skills/
+
+SKILL_DIR=~/.claude/skills   # adjust for your agent
+mkdir -p "$SKILL_DIR"
+cp -r ai-skills/<skill-name> "$SKILL_DIR/"
+```
+
+### Quick reference
+
+| Agent | Skills directory | Global directory | Instructions file |
+|---|---|---|---|
+| **Kilo Code** | `.kilo/skills/` | `~/.config/kilo/skills/` | `AGENTS.md`, `CLAUDE.md` |
+| **OpenCode** | `.opencode/skills/` | `~/.config/opencode/skills/` | `AGENTS.md` |
+| **Claude Code** | `.claude/skills/` | `~/.claude/skills/` | `CLAUDE.md` |
+| **Cursor** | `.cursor/rules/` (`.mdc` files) | `~/.cursor/rules/` | `.cursorrules` |
+| **Gemini CLI** | `.gemini/skills/` | `~/.gemini/skills/` | `GEMINI.md` |
+| **Kiro CLI** | `.kiro/skills/` | `~/.kiro/skills/` | `.kiro/steering/*.md` |
+| **Codex CLI** | `.agents/skills/` | `~/.agents/skills/` | `AGENTS.md` |
+
+> **Note:** Antigravity and Pi could not be verified — no public documentation found for skill installation.
+
 ## Planning & Design
 
 These skills help you think through problems before writing code.
