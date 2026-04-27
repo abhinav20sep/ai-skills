@@ -74,6 +74,34 @@ These skills help you write, refactor, and fix code.
   npx skills@latest add mattpocock/skills/scaffold-exercises
   ```
 
+## Kernel & Systems Development
+
+Skills for Linux kernel module and driver development in C, Rust, and Zig.
+
+- **scaffold-kernel-module** — Scaffold Linux kernel modules and drivers with correct boilerplate. Supports PCIe drivers, character devices, misc devices, platform drivers, Rust kernel modules, and Zig projects.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/scaffold-kernel-module
+  ```
+
+- **setup-kernel-hooks** — Set up native git hooks for C/Rust/Zig kernel projects with clang-format, checkpatch.pl, sparse, rustfmt, clippy, and zig fmt.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/setup-kernel-hooks
+  ```
+
+- **migrate-unsafe-casts** — Find and replace unsafe type casts with safer alternatives. Generates Coccinelle semantic patches for C, applies clippy fixes for Rust, and suggests Zig-safe patterns.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/migrate-unsafe-casts
+  ```
+
+- **kernel-qa** — Interactive QA session for kernel and driver bugs with kernel-specific awareness, reproduction strategies (QEMU, KUnit, fault injection), and issue filing.
+
+  ```
+  npx skills@latest add abhinav20sep/ai-skills/kernel-qa
+  ```
+
 ## Tooling & Setup
 
 - **setup-pre-commit** — Set up Husky pre-commit hooks with lint-staged, Prettier, type checking, and tests.
