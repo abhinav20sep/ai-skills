@@ -143,8 +143,60 @@ cp -r ai-skills/<skill-name> "$SKILL_DIR/"
 | **Gemini CLI** | `.gemini/skills/` | `~/.gemini/skills/` | `GEMINI.md` |
 | **Kiro CLI** | `.kiro/skills/` | `~/.kiro/skills/` | `.kiro/steering/*.md` |
 | **Codex CLI** | `.agents/skills/` | `~/.agents/skills/` | `AGENTS.md` |
+| **Antigravity** | `.antigravity/skills/` * | `~/.antigravity/skills/` * | TBD |
 
-> **Note:** Antigravity and Pi could not be verified — no public documentation found for skill installation.
+\* Antigravity paths inferred from the Agent Skills standard — verify against your Antigravity config.
+
+> **Note:** Pi could not be verified — no public documentation found for skill installation.
+
+### Remote Linux machine (Cursor & Antigravity)
+
+When working on a remote Linux machine via SSH (Cursor SSH Remote, Antigravity remote session, etc.), the skills must be installed **on the remote machine**, not locally.
+
+**Option A: Clone the repo on the remote machine**
+
+```bash
+# SSH into your remote machine, then:
+git clone https://github.com/abhinav20sep/ai-skills.git
+cd <your-project>
+
+# Cursor: copy rules into the project
+mkdir -p .cursor/rules
+for skill in ../ai-skills/*/; do
+  cp "$skill/SKILL.md" ".cursor/rules/$(basename $skill).mdc"
+done
+
+# Antigravity: copy into the agent's instruction directory
+# (check your Antigravity config for the correct path)
+mkdir -p .antigravity/skills
+cp -r ../ai-skills/* .antigravity/skills/
+```
+
+**Option B: Copy from local to remote via scp/rsync**
+
+```bash
+# From your local machine:
+# Cursor
+scp -r ai-skills/* user@remote:~/<project>/.cursor/rules/
+
+# Antigravity
+scp -r ai-skills/* user@remote:~/<project>/.antigravity/skills/
+```
+
+**Option C: Global install on the remote machine**
+
+```bash
+# On the remote machine, install globally so all projects pick them up:
+# Cursor
+mkdir -p ~/.cursor/rules
+cp -r ai-skills/* ~/.cursor/rules/
+
+# Antigravity
+mkdir -p ~/.antigravity/skills
+cp -r ai-skills/* ~/.antigravity/skills/
+```
+
+> **Antigravity note:** Antigravity's public documentation is not yet available. The paths above (`.antigravity/skills/`) are inferred from the agent skills standard. Check your Antigravity config for the correct directory. If it follows the Agent Skills open standard (like most agents), it will read from a `skills/` subdirectory within its config folder.
 
 ## Planning & Design
 
