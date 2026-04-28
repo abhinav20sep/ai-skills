@@ -5,6 +5,8 @@ description: Hardware access patterns for Linux device drivers in C. Covers MMIO
 
 # Linux Hardware Access Patterns
 
+**Core principle**: Never access hardware registers directly. Use `readl`/`writel` for MMIO, `inb`/`outb` for port I/O, and `regmap` for I2C/SPI. Direct pointer dereference of MMIO regions bypasses barriers and breaks on architectures with posted writes. See [DEVICETREE.md](DEVICETREE.md) for device tree reference.
+
 Device driver hardware access for Linux kernel in C.
 
 ## Step 1: Identify hardware interface
@@ -355,6 +357,14 @@ static void my_work_func(struct work_struct *work)
 }
 ```
 
+## Anti-patterns
+
+- **Direct pointer dereference on MMIO** — Never `*(volatile u32 *)regs`. Use `readl`/`writel`. Direct access bypasses barriers and breaks on ARM/POWER.
+- **Missing wmb() between dependent writes** — If register B depends on register A, `writel(A)` then `wmb()` then `writel(B)`. Without the barrier, the CPU may reorder them.
+- **IRQ handler that sleeps** — Standard IRQ handlers run in hard IRQ context. Use threaded IRQs (`request_threaded_irq`) if you need to do I2C/SPI access or allocate memory.
+- **DT compatible string mismatch** — The `compatible` in the driver's `of_device_id` table must exactly match the DT node's `compatible`. One typo means the driver never binds.
+- **Missing MODULE_DEVICE_TABLE** — Without it, the module won't auto-load when the device is present. Always add `MODULE_DEVICE_TABLE(of, ...)`.
+
 ## Step 7: Verify
 
 - [ ] Register definitions match hardware manual
@@ -367,4 +377,4 @@ static void my_work_func(struct work_struct *work)
 - [ ] Device tree compatible string matches `of_device_id` table
 - [ ] Regmap `max_register` set correctly
 
-See `DEVICETREE.md` for device tree reference.
+See [DEVICETREE.md](DEVICETREE.md) for device tree reference.

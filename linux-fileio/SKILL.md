@@ -5,6 +5,8 @@ description: Linux file I/O patterns in C (direct I/O, async I/O, file locking, 
 
 # Linux File I/O Patterns
 
+**Core principle**: The page cache is your friend — until it isn't. Use buffered I/O for general workloads. Use O_DIRECT for databases that manage their own cache. Use sendfile/splice for zero-copy transfer. Never read+write when sendfile suffices.
+
 Advanced file I/O patterns for C, Rust, and Zig on Linux.
 
 ## Step 1: Detect language
@@ -313,6 +315,14 @@ try std.posix.flock(fd, .EXCLUSIVE);
 // ... write ...
 try std.posix.flock(fd, .UN);
 ```
+
+## Anti-patterns
+
+- **Unaligned O_DIRECT buffers** — O_DIRECT requires aligned buffer address, offset, and length. Use `posix_memalign`, not `malloc`.
+- **Missing msync before munmap** — Dirty mmap'd pages are lost without `msync`. Always `msync(ptr, len, MS_SYNC)` before `munmap`.
+- **File lock not released** — Always release `fcntl` locks on all error paths. Or use `flock` which auto-releases on fd close.
+- **sendfile without checking return** — `sendfile` may send fewer bytes than requested. Loop until all bytes are sent.
+- **mmap without bounds checking** — Accessing past the mapped region causes SIGBUS. Always check file size against access offset.
 
 ## Performance comparison
 

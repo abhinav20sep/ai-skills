@@ -5,11 +5,11 @@ description: Interactive QA session for kernel and driver bugs. Explores codebas
 
 # Kernel QA Session
 
+**Core principle**: Diagnose before filing. Don't file issues based on symptoms alone — trace the code path, identify the root cause, and determine if it's a single bug or multiple. A well-diagnosed issue with a clear reproduction path gets fixed; a vague "it crashes sometimes" does not.
+
 Run an interactive QA session for kernel and driver bugs. The user describes problems — you clarify, explore the codebase with kernel-specific awareness, and file issues with appropriate detail.
 
-## For each issue the user raises
-
-### 1. Listen and capture
+## Step 1: Listen and capture
 
 Let the user describe the problem. Accept any of:
 - Kernel panic / oops message
@@ -28,7 +28,7 @@ Ask **at most 2-3 clarifying questions**:
 
 Do NOT over-interview. If the description is clear enough, move on.
 
-### 2. Explore codebase with kernel awareness
+## Step 2: Explore codebase with kernel awareness
 
 Kick off parallel exploration to understand the affected code:
 
@@ -65,7 +65,7 @@ journalctl -k --since "1 hour ago"
 dmesg | grep -iE 'lockdep|deadlock|inconsistent lock'
 ```
 
-### 3. Assess scope
+## Step 3: Assess scope
 
 Before filing, decide: **single issue** or **breakdown**?
 
@@ -78,7 +78,7 @@ Keep as single issue when:
 - One root cause, one fix
 - Symptoms all trace to the same code path
 
-### 4. Attempt reproduction
+## Step 4: Attempt reproduction
 
 Suggest strategies based on the bug type:
 
@@ -132,7 +132,7 @@ echo 1 > /sys/kernel/debug/failslab/interval
 echo 1 > /sys/kernel/debug/failslab/times
 ```
 
-### 5. File the issue
+## Step 5: File the issue
 
 File with `gh issue create`. Use kernel-appropriate detail:
 
@@ -179,9 +179,16 @@ If the user says it used to work:
 - Suggest: `git bisect start <bad> <good>`
 - Identify the subsystem for targeted bisect: `git bisect -- drivers/<subsystem>/`
 
-### 6. Continue session
+## Step 6: Continue session
 
 Keep going until the user says they're done. Each issue is independent — don't batch them.
+
+## Anti-patterns
+
+- **Filing without diagnosis** — Don't file "driver crashes" without tracing the code path. Always identify the specific function and failure mode.
+- **File paths in issues** — Don't include `drivers/gpu/drm/mydriver.c:42` in issues. Describe the module and function. File paths go stale.
+- **Over-interviewing** — At most 2-3 clarifying questions. If the oops message is clear, file immediately.
+- **Batching issues** — Each issue is independent. Don't batch multiple bugs into one issue.
 
 ## Kernel debugging tools reference
 
@@ -196,7 +203,7 @@ Keep going until the user says they're done. Each issue is independent — don't
 | `kselftest` | Integration tests | `make kselftest` |
 | `dynamic debug` | Runtime debug prints | `echo 'module <name> +p' > /sys/kernel/debug/dynamic_debug/control` |
 | `crash` | Post-mortem dump analysis | `crash vmlinux vmcore` |
-| `KASAN` | Use-after-free, buffer overflow | `CONFIG_KASAN=y` — see `SANITIZERS.md` |
-| `KCSAN` | Data race detection | `CONFIG_KCSAN=y` — see `SANITIZERS.md` |
-| `KMSAN` | Uninitialized memory | `CONFIG_KMSAN=y` (Clang only) — see `SANITIZERS.md` |
-| `kmemleak` | Memory leak detection | `CONFIG_DEBUG_KMEMLEAK=y` — see `SANITIZERS.md` |
+| `KASAN` | Use-after-free, buffer overflow | `CONFIG_KASAN=y` — see [SANITIZERS.md](SANITIZERS.md) |
+| `KCSAN` | Data race detection | `CONFIG_KCSAN=y` — see [SANITIZERS.md](SANITIZERS.md) |
+| `KMSAN` | Uninitialized memory | `CONFIG_KMSAN=y` (Clang only) — see [SANITIZERS.md](SANITIZERS.md) |
+| `kmemleak` | Memory leak detection | `CONFIG_DEBUG_KMEMLEAK=y` — see [SANITIZERS.md](SANITIZERS.md) |

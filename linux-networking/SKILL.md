@@ -5,6 +5,8 @@ description: Linux network programming patterns in C (sockets, raw sockets, netl
 
 # Linux Network Programming
 
+**Core principle**: Network I/O is inherently asynchronous. Use non-blocking sockets with an event loop for servers. Use blocking sockets only for simple clients. Never block in an event loop — it freezes all connections.
+
 Socket programming patterns for C, Rust, and Zig on Linux.
 
 ## Step 1: Detect language
@@ -276,6 +278,14 @@ try stream.writeAll("GET / HTTP/1.0\r\nHost: example.com\r\n\r\n");
 var buf: [4096]u8 = undefined;
 const n = try stream.read(&buf);
 ```
+
+## Anti-patterns
+
+- **Missing SO_REUSEADDR** — Without it, server restart fails with "Address already in use" during TIME_WAIT.
+- **Blocking DNS in event loop** — `getaddrinfo` blocks. Use async DNS or a dedicated resolver thread.
+- **No error check on socket/accept** — Always check return values. `-1` means failure, handle it.
+- **Disabling TLS certificate verification** — `SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL)` defeats the purpose of TLS. Always verify.
+- **Hardcoded buffer sizes** — Use `MSG_PEEK` or length-prefixed protocols instead of assuming message size.
 
 ## Step 5: Verify
 

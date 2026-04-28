@@ -5,6 +5,8 @@ description: Process management and IPC patterns for Linux in C (fork/exec, pipe
 
 # Linux Process Management & IPC
 
+**Core principle**: Processes are isolated by default. IPC mechanisms break that isolation deliberately — choose the simplest mechanism that meets your needs. Pipes for parent-child, shared memory for throughput, sockets for unrelated processes. Don't use shared memory when a pipe suffices.
+
 Process lifecycle, signals, and inter-process communication for C, Rust, and Zig on Linux.
 
 ## Step 1: Detect language
@@ -388,6 +390,14 @@ if (pid == 0) {
     std.posix.close(pipe[0]);
 }
 ```
+
+## Anti-patterns
+
+- **Zombie processes** — Always `waitpid()` on children. Or use `signal(SIGCHLD, SIG_IGN)` to auto-reap.
+- **Forgetting to close pipe ends** — Close the read end in the writer, close the write end in the reader. Leaked ends block the other process.
+- **Unsafe functions in signal handlers** — Only async-signal-safe functions allowed. No `malloc`, `printf`, `locks`, or `errno`. Use `volatile sig_atomic_t` flags.
+- **Missing error check on `fork()`** — Always check `fork()` return for `< 0`. The `== 0` (child) and `> 0` (parent) branches must both be handled.
+- **Named pipe / shared memory cleanup** — Always `shm_unlink`, `mq_unlink`, `sem_unlink` in the creator process. Leaked names persist across reboots.
 
 ## IPC mechanism selection guide
 

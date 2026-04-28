@@ -5,6 +5,8 @@ description: Linux memory management for kernel and userspace in C, Rust, and Zi
 
 # Linux Memory Management
 
+**Core principle**: The allocation context determines the API. IRQ handler? `GFP_ATOMIC`. Process context? `GFP_KERNEL`. DMA buffer? `dma_alloc_coherent`. Device-managed? `devm_kzalloc`. Getting the GFP flag or allocation API wrong causes sleeping in atomic context (crash) or OOM in the wrong zone. See [DMA.md](DMA.md) for DMA mapping and [BARRIERS.md](BARRIERS.md) for memory barriers.
+
 Kernel and userspace memory management patterns for C, Rust, and Zig.
 
 ## Step 1: Detect context
@@ -297,7 +299,7 @@ mmap[0] = 42;
 mmap.flush()?;
 ```
 
-See `DMA.md` for DMA mapping and `BARRIERS.md` for memory barriers.
+See [DMA.md](DMA.md) for DMA mapping and [BARRIERS.md](BARRIERS.md) for memory barriers.
 
 ## Step 4: Memory diagnostics
 
@@ -326,6 +328,14 @@ cat /sys/kernel/debug/kmemleak
 echo 1 > /sys/kernel/page_owner
 cat /sys/kernel/debug/page_owner | head -50
 ```
+
+## Anti-patterns
+
+- **GFP_KERNEL in IRQ** — Sleeping in atomic context causes a crash. Always check: am I in IRQ, spinlock, or RCU read?
+- **Missing NULL check** — `kmalloc` can return NULL. `kzalloc` can return NULL. Always check.
+- **vmalloc for DMA** — vmalloc pages are not physically contiguous. Devices can't DMA to them. Use `kmalloc` or `dma_alloc_coherent`.
+- **Forgetting devm_** — If you use `devm_kzalloc`, don't manually `kfree` in remove(). The devm framework handles it.
+- **Leaked mempools** — `mempool_destroy` doesn't free the pre-allocated objects. Free them first, or accept the leak.
 
 ## Step 5: Verify
 

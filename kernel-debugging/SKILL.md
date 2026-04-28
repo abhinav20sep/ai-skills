@@ -5,6 +5,8 @@ description: Systematic Linux kernel debugging workflows using ftrace, perf, cra
 
 # Kernel Debugging
 
+**Core principle**: Start with the symptom, not the tool. A kernel panic needs dmesg and crash, not perf. A performance regression needs perf and flame graphs, not KASAN. Classify the problem first, then choose the tool. See [FTRACE.md](FTRACE.md) for ftrace workflows and [PERF.md](PERF.md) for perf profiling.
+
 Systematic debugging workflows for the Linux kernel. Teaches how to go from symptom → tool → interpretation.
 
 ## Step 1: Identify the symptom
@@ -191,9 +193,9 @@ cat /proc/interrupts
 cat /proc/softirqs
 ```
 
-See `FTRACE.md` for ftrace workflows and `PERF.md` for perf profiling.
+See [FTRACE.md](FTRACE.md) for ftrace workflows and [PERF.md](PERF.md) for perf profiling.
 
-## Step 3: Systematic debugging workflows
+## Step 3: Follow systematic debugging workflows
 
 ### Workflow: Kernel panic / oops
 
@@ -278,6 +280,14 @@ See `FTRACE.md` for ftrace workflows and `PERF.md` for perf profiling.
    perf record -ag -e 'kmem:kmalloc' -- sleep 10
    perf script | head -50
 ```
+
+## Anti-patterns
+
+- **Starting with perf for a panic** — Perf profiles CPU usage. A panic needs dmesg, crash, and addr2line. Match tool to symptom.
+- **No addr2line on oops** — The oops gives you `function+0x42`. Always resolve to source line with `addr2line` or `scripts/faddr-to-line` before reading code.
+- **KASAN in production** — KASAN adds ~2x memory overhead and ~3x slowdown. Use it in development/test builds only.
+- **Missing crash dump setup** — If kdump isn't configured, a panic means lost diagnostics. Set up `crashkernel=256M` on test machines.
+- **Grepping dmesg without -T** — Without timestamps, you can't correlate events. Always use `dmesg -T` or `journalctl -k`.
 
 ## Step 4: Common bug patterns and fixes
 

@@ -5,6 +5,8 @@ description: Find and replace unsafe type casts with safer alternatives in C, Ru
 
 # Migrate Unsafe Casts
 
+**Core principle**: Every cast is a place where the compiler stopped checking your code. Replace raw casts with type-safe alternatives — `container_of` for struct containment, `__user`/`__iomem` for address space annotations, `__bitwise` for flagged types. The goal is zero unannotated casts in kernel code.
+
 Scan codebases for unsafe type casts and replace with safer alternatives. Supports C (kernel + userspace), Rust, and Zig.
 
 ## Step 1: Detect language
@@ -86,7 +88,7 @@ int fd = (int)long_val;
 
 ### Generate Coccinelle patches
 
-For batch migration, generate Coccinelle semantic patches. See `COCCINELLE.md` for examples.
+For batch migration, generate Coccinelle semantic patches. See [COCCINELLE.md](COCCINELLE.md) for examples.
 
 ### Verify
 
@@ -200,6 +202,14 @@ const ptr: *const u32 = @ptrCast(aligned);
 - [ ] `zig build` compiles
 - [ ] `zig build test` passes
 - [ ] Run with `-Drelease-safe=true` to verify safety checks
+
+## Anti-patterns
+
+- **Replacing without verifying** — Don't run Coccinelle patches blindly without reviewing each change. `spatch` can produce incorrect results for complex pointer arithmetic patterns.
+- **Annotating without sparse** — Adding `__user`/`__iomem` annotations is useless without running sparse (`make C=1`). The annotations are only checked by sparse.
+- **Partial migration** — Don't annotate half the call chain. If you add `__user` to a parameter, cascade the annotation through all callers and callees. An annotated pointer passed to an unannotated function defeats the purpose.
+- **`as` to `into()` without checking** — Rust: `val as u8` silently truncates. `u8::try_from(val)` returns a `Result`. Don't blindly replace `as` with `into()` — use `try_from()` for fallible conversions.
+- **Coccinelle on out-of-tree modules** — Coccinelle needs the kernel include path. Run with `spatch --include-path include/` or from the kernel tree root. Running without includes produces parse errors.
 
 ## Step 5: Summary
 

@@ -5,6 +5,8 @@ description: Multithreading patterns for Linux in C (pthreads), Rust (std::threa
 
 # Linux Threading Patterns
 
+**Core principle**: Shared mutable state is the root of all concurrency bugs. Every access to shared data must be protected by a lock, an atomic, or a channel. If you can't identify the synchronization mechanism for a shared variable, you have a bug.
+
 Multithreading patterns for C (pthreads), Rust, and Zig on Linux.
 
 ## Step 1: Detect language
@@ -352,6 +354,14 @@ const exe = b.addExecutable(.{
 });
 exe.linkLibC(); // needed for pthreads on some targets
 ```
+
+## Anti-patterns
+
+- **Double-locking** — Never acquire the same mutex twice in the same thread (unless it's `PTHREAD_MUTEX_RECURSIVE`). Use `PTHREAD_MUTEX_ERRORCHECK` during development to catch this.
+- **Signaling outside lock** — `pthread_cond_signal` must be called while holding the mutex. Signaling outside the lock causes lost wakeups.
+- **`if` instead of `while` on condvar** — Spurious wakeups are real. Always `while (!ready)`, never `if (!ready)`.
+- **Locking too broadly** — Don't hold a lock across I/O, sleep, or long computations. Acquire, copy data, release, then process.
+- **`Rc` across threads** — Rust: `Rc` is not `Send`. Use `Arc` for shared ownership across threads.
 
 ## Step 5: Verify
 

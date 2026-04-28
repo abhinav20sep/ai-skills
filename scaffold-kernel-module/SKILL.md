@@ -5,9 +5,11 @@ description: Scaffold Linux kernel modules and drivers (C, Rust, Zig) with corre
 
 # Scaffold Kernel Module
 
+**Core principle**: Every kernel module starts with correct boilerplate and nothing more. The scaffold should compile and load on first attempt — no placeholder code, no TODOs, no missing Kconfig entries. If the user asked for a PCIe driver, they get a working probe/remove cycle, not a skeleton with comments saying "add your code here."
+
 Generate boilerplate for kernel modules, drivers, and systems projects in C, Rust, or Zig.
 
-## Step 1: Ask user what to scaffold
+## Step 1: Determine what to scaffold
 
 Present these options:
 
@@ -106,14 +108,14 @@ Create `<name>.c` with:
 
 ### C PCIe driver
 
-See `PCIe-DRIVER.md` for the full template. Key files:
+See [PCIe-DRIVER.md](PCIe-DRIVER.md) for the full template. Key files:
 - `<name>.c` — driver with pci_driver struct, probe/remove, BAR, IRQ, DMA
 - `<name>.h` — device private data struct, register definitions
 - `Makefile` — Kbuild
 
 ### Rust kernel module
 
-See `RUST-MODULE.md` for the full template. Key files:
+See [RUST-MODULE.md](RUST-MODULE.md) for the full template. Key files:
 - `<name>.rs` — module with `module!` macro, `impl kernel::Module`
 - `Kconfig` — config entry
 - `Makefile` — Kbuild with Rust targets
@@ -148,9 +150,15 @@ Creates `build.zig`, `build.zig.zon`, `src/main.zig` (or `src/root.zig`).
 - [ ] For Zig: `zig build` passes
 - [ ] Module loads (if applicable): `insmod <name>.ko` / `rmmod <name>`
 
+## Anti-patterns
+
+- **Skeleton with TODOs** — Don't generate empty functions with "implement here" comments. If the user asked for a char device, generate a working read/write that returns data.
+- **Missing error paths** — Every allocation in `probe()` must have a corresponding free in the error path. Don't generate probe() without cleanup.
+- **Wrong license** — Always use `MODULE_LICENSE("GPL")`. Using "Proprietary" blocks EXPORT_SYMBOL_GPL and DMA APIs.
+- **In-tree without Kconfig** — If scaffolding into the kernel tree, always add the Kconfig entry. A module without Kconfig is invisible to `make menuconfig`.
+
 ## Notes
 
-- Always use `MODULE_LICENSE("GPL")` — required for EXPORT_SYMBOL_GPL and DMA APIs
-- For PCIe: reference `PCIe-DRIVER.md` for the full probe/remove/BAR/IRQ/DMA template
-- For Rust kernel: reference `RUST-MODULE.md` for the module! macro and kernel crate patterns
+- For PCIe: reference [PCIe-DRIVER.md](PCIe-DRIVER.md) for the full probe/remove/BAR/IRQ/DMA template
+- For Rust kernel: reference [RUST-MODULE.md](RUST-MODULE.md) for the module! macro and kernel crate patterns
 - In-tree modules go under `drivers/<subsystem>/` with proper Kconfig + Makefile entries

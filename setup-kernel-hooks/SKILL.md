@@ -5,6 +5,8 @@ description: Set up native git hooks for C/Rust/Zig kernel and systems projects.
 
 # Setup Kernel Hooks
 
+**Core principle**: Code quality enforcement happens at commit time, not in CI. If the code doesn't pass clang-format, checkpatch, or rustfmt, it never enters the repository. This catches style violations before they spread.
+
 Set up native git hooks for kernel and systems projects. No Node.js required — uses shell scripts and native tooling.
 
 ## Step 1: Detect project languages
@@ -194,6 +196,14 @@ git config core.hooksPath githooks/
 ```
 
 This is a one-time per-clone setup. Add to project README.
+
+## Anti-patterns
+
+- **Mixing checkpatch and auto-formatters** — Don't run checkpatch.pl and clang-format on the same commit without ordering. clang-format first, then checkpatch for semantic issues.
+- **Skipping tool availability check** — Don't assume clang-format or sparse is installed. Always check with `which` first and skip with a warning if missing.
+- **Quiet failures in hooks** — Never `|| true` on formatting checks. Formatting failures should exit with an error (exit 1). Only use `|| true` for checkpatch which has known false positives.
+- **Wrong hooksPath** — `git config core.hooksPath` must be set in the repo root, not in a subdirectory. Always `cd` to the root first or use absolute paths.
+- **Pre-push running all tests** — Don't run KUnit or kselftest in pre-commit. These take minutes to hours. Run formatting/linting in pre-commit, tests in pre-push.
 
 ## Step 8: Verify
 

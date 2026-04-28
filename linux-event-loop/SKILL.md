@@ -5,6 +5,8 @@ description: Event-driven I/O patterns for Linux in C (epoll, select, poll, io_u
 
 # Linux Event Loop Patterns
 
+**Core principle**: Blocking I/O wastes a thread per connection. Event-driven I/O multiplexes thousands of connections onto a single thread. Choose epoll for general Linux, io_uring for maximum performance, and tokio for Rust async. The event loop is the reactor — all I/O is non-blocking, all state is per-connection.
+
 Event-driven I/O and non-blocking patterns for C, Rust, and Zig on Linux.
 
 ## Step 1: Detect language
@@ -341,6 +343,14 @@ while (true) {
     }
 }
 ```
+
+## Anti-patterns
+
+- **Blocking I/O in event loop** — Never call `read()` or `write()` without `O_NONBLOCK`. A blocking read freezes the entire event loop.
+- **Missing EAGAIN handling** — Edge-triggered epoll requires reading until `EAGAIN`. Stopping at the first `read()` loses events.
+- **Leaked connections** — Always `close(fd)` + `EPOLL_CTL_DEL` on EOF and error. Leaked fds accumulate until the process hits the limit.
+- **No SO_REUSEADDR** — Without it, server restart fails with "Address already in use" for ~60 seconds (TIME_WAIT).
+- **Mixing blocking and async** — Don't spawn blocking threads inside an async runtime without `spawn_blocking`. It blocks the event loop thread.
 
 ## Performance comparison
 
